@@ -11,14 +11,18 @@ from PIL import Image, UnidentifiedImageError
 HOST = os.getenv("FASTAPI_HOST", "0.0.0.0")
 PORT = int(os.getenv("FASTAPI_PORT", "8000"))
 
+# Get model names from environment variables
+TEXT_MODEL = os.getenv('TEXT_EMBEDDING_MODEL', 'BAAI/bge-small-en-v1.5')
+IMAGE_MODEL = os.getenv('IMAGE_EMBEDDING_MODEL', 'Qdrant/clip-ViT-B-32-vision')
+
 app = FastAPI()
 
 # Initialize embedding models
-text_embedding_model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
-image_embedding_model = ImageEmbedding(model_name="Qdrant/clip-ViT-B-32-vision")
+text_embedding_model = TextEmbedding(model_name=TEXT_MODEL)
+image_embedding_model = ImageEmbedding(model_name=IMAGE_MODEL)
 
-print("The text model BAAI/bge-small-en-v1.5 is ready to use.")
-print("The image model Qdrant/clip-ViT-B-32-vision is ready to use.")
+print(f"The text model {TEXT_MODEL} is ready to use.")
+print(f"The image model {IMAGE_MODEL} is ready to use.")
 
 class TextEmbeddingRequest(BaseModel):
     documents: List[str]

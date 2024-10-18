@@ -12,6 +12,15 @@ env:
 
 jobs:
   build-and-push-image:
+    strategy:
+      matrix:
+        include:
+          - text_model: "BAAI/bge-small-en-v1.5"
+            image_model: "Qdrant/clip-ViT-B-32-vision"
+          - text_model: "intfloat/multilingual-e5-large"
+            image_model: "Qdrant/Unicom-ViT-B-16"
+          # Add more combinations as needed
+
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -33,6 +42,11 @@ jobs:
       uses: docker/metadata-action@v5
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=sha
+          type=ref,event=branch
+          type=ref,event=pr
+          type=raw,value=${{ matrix.text_model }}-${{ matrix.image_model }}
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v6
@@ -41,3 +55,6 @@ jobs:
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
+        build-args: |
+          TEXT_EMBEDDING_MODEL=${{ matrix.text_model }}
+          IMAGE_EMBEDDING_MODEL=${{ matrix.image_model }}

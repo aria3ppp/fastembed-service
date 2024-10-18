@@ -1,11 +1,16 @@
 build docker image:
 ```
-docker build -t fastembed-service .  
+docker build -t fastembed-service \
+  --build-arg TEXT_EMBEDDING_MODEL="BAAI/bge-small-en-v1.5" \
+  --build-arg IMAGE_EMBEDDING_MODEL="Qdrant/clip-ViT-B-32-vision" \
+  .
 ```
 
 run:
 ```
 docker run \
+  -e TEXT_EMBEDDING_MODEL="BAAI/bge-small-en-v1.5" \
+  -e IMAGE_EMBEDDING_MODEL="Qdrant/clip-ViT-B-32-vision" \
   -e FASTAPI_HOST=0.0.0.0 \
   -e FASTAPI_PORT=8000 \
   -p 8000:8000 \
