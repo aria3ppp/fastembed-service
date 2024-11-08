@@ -2,43 +2,22 @@ import os
 from typing import List
 import io
 from fastapi import FastAPI, File, UploadFile, HTTPException
-from pydantic import BaseModel
-import numpy as np
-from fastembed import TextEmbedding, ImageEmbedding
+from fastembed import ImageEmbedding
 from PIL import Image, UnidentifiedImageError
 
 # Get host and port from environment variables with default values
 HOST = os.getenv("FASTAPI_HOST", "0.0.0.0")
 PORT = int(os.getenv("FASTAPI_PORT", "8000"))
 
-# Get model names from environment variables
-TEXT_MODEL = os.getenv('TEXT_EMBEDDING_MODEL', 'BAAI/bge-small-en-v1.5')
+# Get model name from environment variable
 IMAGE_MODEL = os.getenv('IMAGE_EMBEDDING_MODEL', 'Qdrant/clip-ViT-B-32-vision')
 
 app = FastAPI()
 
-# Initialize embedding models
-text_embedding_model = TextEmbedding(model_name=TEXT_MODEL)
+# Initialize embedding model
 image_embedding_model = ImageEmbedding(model_name=IMAGE_MODEL)
 
-print(f"The text model {TEXT_MODEL} is ready to use.")
 print(f"The image model {IMAGE_MODEL} is ready to use.")
-
-class TextEmbeddingRequest(BaseModel):
-    documents: List[str]
-
-@app.post("/embed_text")
-async def embed_text(request: TextEmbeddingRequest):
-    try:
-        embeddings_generator = text_embedding_model.embed(request.documents)
-        embeddings_list = list(embeddings_generator)
-        embedding_size = len(embeddings_list[0]) if embeddings_list else 0
-        return {
-            "embeddings": [emb.tolist() for emb in embeddings_list],
-            "embedding_size": embedding_size
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/embed_image")
 async def embed_image(files: List[UploadFile] = File(...)):
@@ -51,11 +30,9 @@ async def embed_image(files: List[UploadFile] = File(...)):
                 image_data.append(img)
             except UnidentifiedImageError:
                 raise HTTPException(status_code=400, detail=f"File '{file.filename}' is not a valid image file")
-
         image_embeddings_generator = image_embedding_model.embed(image_data)
         image_embeddings_list = list(image_embeddings_generator)
         embedding_size = len(image_embeddings_list[0]) if image_embeddings_list else 0
-
         return {
             "embeddings": [emb.tolist() for emb in image_embeddings_list],
             "embedding_size": embedding_size
@@ -64,6 +41,13 @@ async def embed_image(files: List[UploadFile] = File(...)):
         raise he
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/healthcheck")
+async def healthcheck():
+    """
+    Health check endpoint to check if the service is up and running.
+    """
+    return {"status": "OK"}
 
 if __name__ == "__main__":
     import uvicorn

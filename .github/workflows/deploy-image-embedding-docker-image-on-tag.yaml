@@ -1,0 +1,47 @@
+name: Build and Deploy Image Embedding to GHCR (tag)
+on:
+  push:
+    tags: [ '*' ]
+env:
+  REGISTRY: ghcr.io
+  REPOSITORY_OWNER: ${{ github.repository_owner }}
+  IMAGE_PREFIX: fastembed
+jobs:
+  build-and-push-image:
+    strategy:
+      matrix:
+        include:
+          - model_name: "Qdrant/clip-ViT-B-32-vision"
+            model_name_slash_free_lowercase: "qdrant-clip-vit-b-32-vision"
+          - model_name: "Qdrant/Unicom-ViT-B-16"
+            model_name_slash_free_lowercase: "qdrant-unicom-vit-b-16"
+          # Add more combinations as needed
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Get the tag name
+      id: get_tag
+      run: |
+        # Extract the tag name without the 'refs/tags/' prefix
+        echo ::set-output name=TAG_NAME::${GITHUB_REF#refs/tags/}
+    - name: Log in to the Container registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v6
+      env:
+        IMAGE_NAME: ${{ env.IMAGE_PREFIX }}-${{ matrix.model_name_slash_free_lowercase }}
+      with:
+        context: .
+        file: ./docker/DockerfileImageEmbedding
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.REPOSITORY_OWNER }}/${{ env.IMAGE_NAME }}:${{ steps.get_tag.outputs.TAG_NAME }}
+        build-args: |
+          IMAGE_EMBEDDING_MODEL=${{ matrix.model_name }}
