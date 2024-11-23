@@ -1,0 +1,47 @@
+name: Build and Deploy Reranker to GHCR (tag)
+on:
+  push:
+    tags: [ '*' ]
+env:
+  REGISTRY: ghcr.io
+  REPOSITORY_OWNER: ${{ github.repository_owner }}
+  IMAGE_PREFIX: fastembed
+jobs:
+  build-and-push-image:
+    strategy:
+      matrix:
+        include:
+          - model_name: "jinaai/jina-reranker-v1-tiny-en"
+            model_name_slash_free_lowercase: "jinaai-jina-reranker-v1-tiny-en"
+          - model_name: "jinaai/jina-reranker-v2-base-multilingual"
+            model_name_slash_free_lowercase: "jinaai-jina-reranker-v2-base-multilingual"
+          # Add more combinations as needed
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Get the tag name
+      id: get_tag
+      run: |
+        # Extract the tag name without the 'refs/tags/' prefix
+        echo ::set-output name=TAG_NAME::${GITHUB_REF#refs/tags/}
+    - name: Log in to the Container registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v6
+      env:
+        IMAGE_NAME: ${{ env.IMAGE_PREFIX }}-${{ matrix.model_name_slash_free_lowercase }}
+      with:
+        context: .
+        file: ./docker/DockerfileReranker
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.REPOSITORY_OWNER }}/${{ env.IMAGE_NAME }}:${{ steps.get_tag.outputs.TAG_NAME }}
+        build-args: |
+          RERANKER_MODEL=${{ matrix.model_name }}
